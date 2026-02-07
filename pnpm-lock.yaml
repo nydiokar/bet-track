@@ -11,8 +11,8 @@ importers:
   backend:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.67.0
-        version: 0.67.1(zod@3.25.76)
+        specifier: ^0.74.0
+        version: 0.74.0(zod@3.25.76)
       '@fastify/cors':
         specifier: ^11.1.0
         version: 11.2.0
@@ -105,8 +105,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.67.1':
-    resolution: {integrity: sha512-ZLYZLog5ttur2OXkBxoCr8C+bsIGG//OwKYoDw4ZOlwdKF6u+qqQ7y+R4x9zqgQJBbdg5qZs6RHA7L+QpSrHUA==}
+  '@anthropic-ai/sdk@0.74.0':
+    resolution: {integrity: sha512-srbJV7JKsc5cQ6eVuFzjZO7UR3xEPJqPamHFIe29bs38Ij2IripoAhC0S5NslNbaFUYqBKypmmpzMTpqfHEUDw==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -1342,7 +1342,7 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.67.1(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.74.0(zod@3.25.76)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
