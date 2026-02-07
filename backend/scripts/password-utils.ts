@@ -5,7 +5,11 @@ export const readSecret = async (label: string): Promise<string> => {
     input: process.stdin,
     output: process.stdout,
     terminal: true,
-  }) as readline.Interface & { stdoutMuted?: boolean; _writeToOutput?: (str: string) => void };
+  }) as readline.Interface & {
+    stdoutMuted?: boolean;
+    _writeToOutput?: (str: string) => void;
+    output: NodeJS.WriteStream;
+  };
 
   rl.stdoutMuted = true;
   rl._writeToOutput = function _writeToOutput(str: string) {
