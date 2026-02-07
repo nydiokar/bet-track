@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
+
+model Bet {
+  id           String    @id
+  kind         String    @default("single")
+  teams        String
+  betType      String    @map("bet_type")
+  odds         Float
+  stake        Float
+  currency     String    @default("EUR")
+  matchTime    DateTime  @map("match_time")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  uploadedBy   String?   @map("uploaded_by")
+  status       String    @default("upcoming")
+  confidence   String?
+  result       String?
+  actualReturn Float?    @map("actual_return")
+  settlementState String @default("pending") @map("settlement_state")
+  provider     String?
+  providerRef  String?   @map("provider_ref")
+  settledAt    DateTime? @map("settled_at")
+  notes        String?
+  lastUpdated  DateTime  @updatedAt @map("last_updated")
+  deletedAt    DateTime? @map("deleted_at")
+
+  auditLogs AuditLog[]
+  legs     BetLeg[]
+
+  @@index([matchTime])
+  @@index([status])
+  @@index([kind])
+  @@index([settlementState])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("bets")
+}
+
+model BetLeg {
+  id              String    @id
+  betId           String    @map("bet_id")
+  legOrder        Int       @map("leg_order")
+  teams           String
+  marketType      String    @map("market_type")
+  selection       String
+  line            Float?
+  odds            Float
+  eventTime       DateTime  @map("event_time")
+  provider        String?
+  providerEventId String?   @map("provider_event_id")
+  settlement      String    @default("pending")
+  scoreHome       Int?      @map("score_home")
+  scoreAway       Int?      @map("score_away")
+  checkedAt       DateTime? @map("checked_at")
+  settledAt       DateTime? @map("settled_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  bet Bet @relation(fields: [betId], references: [id], onDelete: Cascade)
+
+  @@index([betId])
+  @@index([providerEventId])
+  @@index([settlement])
+  @@index([eventTime])
+  @@map("bet_legs")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  betId     String?  @map("bet_id")
+  action    String
+  changedBy String?  @map("changed_by")
+  changes   String?
+  timestamp DateTime @default(now())
+
+  bet Bet? @relation(fields: [betId], references: [id], onDelete: SetNull)
+
+  @@index([betId])
+  @@map("audit_log")
+}

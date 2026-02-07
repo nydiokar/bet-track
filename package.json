@@ -1,0 +1,19 @@
+{
+  "name": "bet-track",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@10.6.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter bet-track-backend test",
+    "start": "pnpm --filter bet-track-backend start",
+    "db:migrate": "pnpm --filter bet-track-backend db:migrate",
+    "db:push": "pnpm --filter bet-track-backend db:push",
+    "db:seed": "pnpm --filter bet-track-backend db:seed"
+  }
+}
