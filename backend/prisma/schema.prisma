@@ -41,6 +41,7 @@ model Bet {
   auditLogs AuditLog[]
   legs     BetLeg[]
 
+  @@unique([teams, matchTime, betType, stake], name: "bet_dedup")
   @@index([matchTime])
   @@index([status])
   @@index([kind])

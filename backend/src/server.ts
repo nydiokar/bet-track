@@ -246,6 +246,10 @@ app.post("/api/upload", { preHandler: [authGuard] }, async (request, reply) => {
     return { success: true, bet: mapBet(created), raw_extraction: raw, confidence: created.confidence };
   } catch (error: any) {
     request.log.warn({ reqId: request.id, actor: request.actor, durationMs: Date.now() - start, reason: error.message }, "upload_failed");
+    const isDuplicate = error?.code === "P2002" && error?.meta?.target?.includes("bet_dedup");
+    if (isDuplicate) {
+      return reply.status(409).send({ success: false, error: "This bet was already uploaded" });
+    }
     return reply.status(error.statusCode ?? 422).send({
       success: false,
       error: error.statusCode === 503 ? "Image extraction is currently unavailable" : "Could not extract betting data from image",
