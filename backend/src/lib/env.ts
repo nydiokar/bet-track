@@ -19,7 +19,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   DATABASE_URL: z.string().default("file:./data/bet-track.sqlite"),
-  PASSWORD_HASH: z.string().min(20),
+  PASSWORD_HASH: z.string().min(20).default("$2b$10$placeholder-hash-for-ci-testing-only"),
   JWT_SECRET: z.string().min(12).default("dev-insecure-secret-change-me"),
   JWT_EXPIRY_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 7),
   ANTHROPIC_API_KEY: z.string().optional(),

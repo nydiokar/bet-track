@@ -2,10 +2,6 @@ import { FastifyBaseLogger } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { SettlementProvider, ProviderFixture } from "./types.js";
 
-/**
- * Normalises a team name for fuzzy matching:
- * lowercase, remove common suffixes/prefixes, collapse whitespace.
- */
 const normalise = (name: string): string =>
   name
     .toLowerCase()
@@ -14,10 +10,6 @@ const normalise = (name: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
-/**
- * Returns true if candidate fixture teams match both sides of a leg's teams string.
- * leg.teams is expected to be "Team A vs Team B" or "Team A - Team B".
- */
 const teamsMatch = (legTeams: string, fixture: ProviderFixture): boolean => {
   const parts = legTeams.split(/\s+(?:vs\.?|-)\s+/i);
   if (parts.length !== 2) return false;
@@ -26,7 +18,6 @@ const teamsMatch = (legTeams: string, fixture: ProviderFixture): boolean => {
   const fixHome = normalise(fixture.homeTeam);
   const fixAway = normalise(fixture.awayTeam);
 
-  // Both sides must match (either direction to handle some API inconsistencies)
   const forwardMatch =
     (fixHome.includes(legHome) || legHome.includes(fixHome)) &&
     (fixAway.includes(legAway) || legAway.includes(fixAway));
@@ -40,6 +31,41 @@ const teamsMatch = (legTeams: string, fixture: ProviderFixture): boolean => {
 
 const toDateString = (d: Date): string => d.toISOString().slice(0, 10);
 
+/**
+ * Returns fixtures for a given date, using the DB cache if available.
+ * Cache is permanent — fixture lists for a day don't change meaningfully.
+ */
+const getFixturesForDate = async (opts: {
+  prisma: PrismaClient;
+  provider: SettlementProvider;
+  logger: FastifyBaseLogger;
+  date: string;
+}): Promise<ProviderFixture[]> => {
+  const { prisma, provider, logger, date } = opts;
+
+  const cached = await prisma.fixtureCache.findUnique({
+    where: { provider_date: { provider: provider.name, date } },
+  });
+
+  if (cached) {
+    logger.debug({ provider: provider.name, date }, "resolver_cache_hit");
+    return JSON.parse(cached.fixtures) as ProviderFixture[];
+  }
+
+  const fixtures = await provider.getFixturesByDate(date);
+
+  await prisma.fixtureCache.create({
+    data: {
+      provider: provider.name,
+      date,
+      fixtures: JSON.stringify(fixtures),
+    },
+  });
+
+  logger.info({ provider: provider.name, date, count: fixtures.length }, "resolver_cache_stored");
+  return fixtures;
+};
+
 export const runFixtureResolver = async (opts: {
   prisma: PrismaClient;
   provider: SettlementProvider;
@@ -47,7 +73,6 @@ export const runFixtureResolver = async (opts: {
 }): Promise<{ datesChecked: number; legsResolved: number; legsUnmatched: number }> => {
   const { prisma, provider, logger } = opts;
 
-  // Find all legs that still need a providerEventId and haven't been settled yet
   const unresolvedLegs = await prisma.betLeg.findMany({
     where: {
       providerEventId: null,
@@ -66,7 +91,6 @@ export const runFixtureResolver = async (opts: {
     return { datesChecked: 0, legsResolved: 0, legsUnmatched: 0 };
   }
 
-  // Group legs by calendar date (UTC) — one API call covers an entire day
   const byDate = new Map<string, typeof unresolvedLegs>();
   for (const leg of unresolvedLegs) {
     const dateStr = toDateString(leg.eventTime);
@@ -81,7 +105,7 @@ export const runFixtureResolver = async (opts: {
   for (const [dateStr, legs] of byDate) {
     let fixtures: ProviderFixture[];
     try {
-      fixtures = await provider.getFixturesByDate(dateStr);
+      fixtures = await getFixturesForDate({ prisma, provider, logger, date: dateStr });
     } catch (err) {
       logger.warn({ provider: provider.name, date: dateStr, err }, "resolver_fetch_error");
       continue;
