@@ -204,6 +204,33 @@ tbody td {
 .pill.finished { background: #ececec; }
 .pill.settled { background: #fff0c2; }
 
+.parlay-label { font-weight: 600; }
+
+.leg-row td {
+  background: #faf8f2;
+  padding: 5px 10px 5px 22px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  border-bottom: 1px solid #f0ece0;
+}
+
+.leg-teams { font-weight: 500; color: var(--ink); }
+.leg-selection { font-style: italic; }
+.leg-odds { color: var(--ink); }
+
+.leg-settlement {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 0.78rem;
+  background: #fff;
+  cursor: pointer;
+}
+.leg-settlement--won  { background: #d7f6e8; border-color: #7ecfab; }
+.leg-settlement--lost { background: #fde8e8; border-color: #e8a0a0; }
+.leg-settlement--push { background: #fff0c2; border-color: #d4b84a; }
+.leg-settlement--void { background: #ececec; border-color: #bbb; }
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

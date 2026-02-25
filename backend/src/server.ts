@@ -31,7 +31,7 @@ const app = Fastify({
 const settlementProvider = createSettlementProvider();
 let settlementInterval: NodeJS.Timeout | null = null;
 
-await app.register(cors, { origin: env.CORS_ORIGIN });
+await app.register(cors, { origin: env.CORS_ORIGIN, methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] });
 await app.register(helmet);
 await app.register(rateLimit, { max: 250, timeWindow: "15 minutes" });
 await app.register(jwt, { secret: env.JWT_SECRET });
@@ -385,6 +385,24 @@ app.delete("/api/bets/:id", { preHandler: [authGuard] }, async (request: any, re
   request.log.info({ reqId: request.id, actor: request.actor, betId: existing.id }, "bet_deleted");
 
   return { success: true, message: "Bet deleted successfully" };
+});
+
+app.patch("/api/bets/:id/legs/:legId", { preHandler: [authGuard] }, async (request: any, reply) => {
+  const { settlement } = request.body as { settlement?: string };
+  const allowed = new Set(["pending", "won", "lost", "void", "push"]);
+  if (!settlement || !allowed.has(settlement)) {
+    return reply.status(400).send({ success: false, error: "settlement must be one of: pending, won, lost, void, push" });
+  }
+
+  const leg = await prisma.betLeg.findFirst({ where: { id: request.params.legId, betId: request.params.id } });
+  if (!leg) return reply.status(404).send({ success: false, error: "Leg not found" });
+
+  const updated = await prisma.betLeg.update({
+    where: { id: leg.id },
+    data: { settlement, settledAt: settlement !== "pending" ? new Date() : null },
+  });
+
+  return { success: true, leg: { id: updated.id, settlement: updated.settlement } };
 });
 
 app.post("/api/settlement/run", { preHandler: [authGuard] }, async (request: any) => {

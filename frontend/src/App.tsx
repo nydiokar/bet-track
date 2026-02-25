@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Bet, downloadCsv, fmtDate, fmtMoney } from "./api";
+import { api, Bet, downloadCsv, fmtDate, fmtMoney, legStatus } from "./api";
 
 const tokenKey = "bet_track_token";
 
@@ -268,30 +268,51 @@ export default function App() {
                 <tr><td colSpan={10} className="empty">No bets found</td></tr>
               ) : null}
               {bets.map((bet) => (
-                <tr key={bet.id}>
-                  <td>{fmtDate(bet.match_time)}</td>
-                  <td>{bet.teams}</td>
-                  <td>{bet.bet_type}</td>
-                  <td>{bet.kind === "parlay" ? `Parlay (${bet.legs?.length ?? 0})` : "Single"}</td>
-                  <td>{bet.odds}</td>
-                  <td>{fmtMoney(bet.stake, bet.currency)}</td>
-                  <td><span className={`pill ${bet.status}`}>{bet.status}</span></td>
-                  <td>{bet.result ?? "pending"}</td>
-                  <td className="notes-cell">{bet.notes ?? "-"}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="ghost tiny" onClick={() => startEdit(bet)}>Edit</button>
-                      <button
-                        className="danger tiny"
-                        onClick={() => {
-                          if (window.confirm("Delete this bet?")) deleteMutation.mutate(bet.id);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={bet.id}>
+                  <tr>
+                    <td>{fmtDate(bet.match_time)}</td>
+                    <td>
+                      {bet.kind === "parlay"
+                        ? <span className="parlay-label">Parlay ({bet.legs?.length ?? 0} legs)</span>
+                        : bet.teams}
+                    </td>
+                    <td>{bet.kind === "parlay" ? `Combined @ ${bet.odds}` : bet.bet_type}</td>
+                    <td>{bet.kind === "parlay" ? "Parlay" : "Single"}</td>
+                    <td>{bet.odds}</td>
+                    <td>{fmtMoney(bet.stake, bet.currency)}</td>
+                    <td><span className={`pill ${bet.status}`}>{bet.status}</span></td>
+                    <td>{bet.result ?? "pending"}</td>
+                    <td className="notes-cell">{bet.notes ?? "-"}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="ghost tiny" onClick={() => startEdit(bet)}>Edit</button>
+                        <button
+                          className="danger tiny"
+                          onClick={() => {
+                            if (window.confirm("Delete this bet?")) deleteMutation.mutate(bet.id);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {bet.kind === "parlay" && bet.legs?.map((leg) => {
+                    const ls = legStatus(leg.event_time);
+                    return (
+                      <tr key={leg.id} className="leg-row">
+                        <td>{fmtDate(leg.event_time)}</td>
+                        <td className="leg-teams">{leg.teams}</td>
+                        <td className="leg-selection">
+                          {leg.market_type} · {leg.selection}{leg.line != null ? ` ${leg.line}` : ""}
+                        </td>
+                        <td className="leg-odds">@ {leg.odds}</td>
+                        <td>{ls !== "finished" && <span className={`pill ${ls}`}>{ls}</span>}</td>
+                        <td colSpan={5} />
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

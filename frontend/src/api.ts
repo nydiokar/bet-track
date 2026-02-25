@@ -36,7 +36,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<ApiResponse<T>> {
   const headers = new Headers(init.headers);
-  if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
@@ -61,6 +61,8 @@ export const api = {
   updateBet: (token: string, id: string, data: Record<string, unknown>) =>
     request<{ bet: Bet }>(`/api/bets/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
   deleteBet: (token: string, id: string) => request<{ message: string }>(`/api/bets/${id}`, { method: "DELETE" }, token),
+  updateLeg: (token: string, betId: string, legId: string, settlement: string) =>
+    request<{ leg: { id: string; settlement: string } }>(`/api/bets/${betId}/legs/${legId}`, { method: "PATCH", body: JSON.stringify({ settlement }) }, token),
 };
 
 export const fmtMoney = (value: number | null | undefined, currency = "EUR") => {
@@ -70,6 +72,13 @@ export const fmtMoney = (value: number | null | undefined, currency = "EUR") => 
   } catch {
     return `${value.toFixed(2)} ${currency}`;
   }
+};
+
+export const legStatus = (eventTime: string): "upcoming" | "live" | "finished" => {
+  const diff = new Date(eventTime).getTime() - Date.now();
+  if (diff > 0) return "upcoming";
+  if (diff > -(3 * 60 * 60 * 1000)) return "live";
+  return "finished";
 };
 
 export const fmtDate = (iso: string) => {

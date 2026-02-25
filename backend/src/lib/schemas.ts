@@ -4,13 +4,25 @@ export const authBodySchema = z.object({
   password: z.string().min(1),
 });
 
+const fallbackTime = () => {
+  const d = new Date();
+  d.setUTCHours(20, 0, 0, 0);
+  return d.toISOString();
+};
+
+const datetimeOrFallback = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => (v && !Number.isNaN(new Date(v).getTime()) ? v : fallbackTime()));
+
 export const legSchema = z.object({
   teams: z.string().min(3).max(200),
   market_type: z.string().min(2).max(80),
   selection: z.string().min(1).max(120),
   line: z.number().optional().nullable(),
   odds: z.number().min(1.01),
-  event_time: z.string().datetime({ offset: true }),
+  event_time: datetimeOrFallback,
   provider: z.string().optional().nullable(),
   provider_event_id: z.string().optional().nullable(),
 });
@@ -23,7 +35,7 @@ export const createBetSchema = z
     odds: z.number().min(1.01),
     stake: z.number().positive(),
     currency: z.string().length(3).transform((v) => v.toUpperCase()),
-    match_time: z.string().datetime({ offset: true }),
+    match_time: datetimeOrFallback,
     confidence: z.enum(["high", "medium", "low"]).optional().nullable(),
     notes: z.string().max(2000).optional().nullable(),
     uploaded_by: z.string().max(50).optional().nullable(),
