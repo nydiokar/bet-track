@@ -75,13 +75,20 @@ export default function App() {
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
+      const results: string[] = [];
       for (let i = 0; i < files.length; i += 1) {
         setMessage(`Processing ${i + 1}/${files.length}...`);
-        await api.upload(token, files[i]);
+        try {
+          await api.upload(token, files[i]);
+          results.push(`✓ ${files[i].name}`);
+        } catch (err: any) {
+          results.push(`✗ ${files[i].name}: ${err.message}`);
+        }
       }
+      return results;
     },
-    onSuccess: async () => {
-      setMessage(`Processed ${files.length} screenshot(s)`);
+    onSuccess: async (results) => {
+      setMessage(results.join(" | "));
       setFiles([]);
       setShowAddModal(false);
       await invalidate();

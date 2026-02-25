@@ -33,9 +33,11 @@ KEY DISTINCTIONS:
 
 ## STEP 3: EXTRACT DATES & TIMES
 
-- Format as ISO 8601 with Z suffix: "2026-02-05T21:30:00Z"
-- If only date given (e.g., "05/02"), use match kickoff time if visible, else assume 20:00
+- Times on these slips are in Eastern European Time (EET = UTC+2 in winter, EEST = UTC+3 in summer)
+- Output times with the +02:00 offset, do NOT convert to UTC. Example: slip shows "21:45" in February → "2026-02-05T21:45:00+02:00"
+- If only date given (e.g., "05/02"), use match kickoff time if visible, else assume 20:00, output as "2026-02-05T20:00:00+02:00"
 - If only time given (e.g., "21:30"), combine with date from slip header
+- If NO date is visible anywhere on the image: set match_time to null. Do NOT invent or guess a date.
 
 ---
 
@@ -134,7 +136,8 @@ Map these to market_type and selection:
    - "medium" = Some fields inferred; minor ambiguity
    - "low" = Multiple missing fields or unclear data
 6. **provider**: Extract if visible (e.g., "Palms Bet", "Winbet", "BetKing")
-7. **match_time**: Use earliest event time for single/parlay header
+7. **match_time**: Use earliest event time for single/parlay header. If no date visible anywhere, set null.
+8. **provider_ref**: Extract ticket/slip number if visible (e.g., "№ 147449801749404626" → "147449801749404626")
 
 ---
 
