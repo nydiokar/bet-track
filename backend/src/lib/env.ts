@@ -26,7 +26,12 @@ const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5-20251001"),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(10),
   SETTLEMENT_PROVIDER: z.enum(["none", "api_football"]).default("none"),
+  // How often to run the settlement poller (minutes). 0 = disabled.
   SETTLEMENT_POLL_MINUTES: z.coerce.number().int().min(0).default(0),
+  // How many minutes after eventTime before we consider a match potentially finished (default 90).
+  SETTLEMENT_MATCH_WINDOW_MINUTES: z.coerce.number().int().min(0).default(90),
+  // How often to run the fixture ID resolver (minutes). 0 = disabled.
+  FIXTURE_RESOLVE_MINUTES: z.coerce.number().int().min(0).default(0),
   API_FOOTBALL_KEY: z.string().optional(),
   API_FOOTBALL_BASE_URL: z.string().url().default("https://v3.football.api-sports.io"),
 });

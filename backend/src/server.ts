@@ -13,6 +13,7 @@ import { authBodySchema, createBetSchema, legSchema, listQuerySchema, patchBetSc
 import { extractBetFromImage } from "./services/extraction.js";
 import { createSettlementProvider } from "./settlement/providerFactory.js";
 import { runSettlementCycle } from "./settlement/runner.js";
+import { runFixtureResolver } from "./settlement/resolver.js";
 import { parseBetTypeToMarket } from "./settlement/marketParser.js";
 
 const app = Fastify({
@@ -30,6 +31,7 @@ const app = Fastify({
 
 const settlementProvider = createSettlementProvider();
 let settlementInterval: NodeJS.Timeout | null = null;
+let resolverInterval: NodeJS.Timeout | null = null;
 
 await app.register(cors, { origin: env.CORS_ORIGIN, methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] });
 await app.register(helmet);
@@ -417,8 +419,19 @@ app.post("/api/settlement/run", { preHandler: [authGuard] }, async (request: any
     provider: settlementProvider,
     logger: app.log,
     actor: request.actor,
+    matchWindowMinutes: env.SETTLEMENT_MATCH_WINDOW_MINUTES,
   });
   app.log.info({ reqId: request.id, actor: request.actor, summary }, "settlement_cycle_manual");
+  return { success: true, summary };
+});
+
+app.post("/api/settlement/resolve", { preHandler: [authGuard] }, async (request: any) => {
+  const summary = await runFixtureResolver({
+    prisma,
+    provider: settlementProvider,
+    logger: app.log,
+  });
+  app.log.info({ reqId: request.id, actor: request.actor, summary }, "fixture_resolver_manual");
   return { success: true, summary };
 });
 
@@ -431,13 +444,32 @@ const start = async () => {
   if (env.SETTLEMENT_POLL_MINUTES > 0 && settlementProvider.name !== "none") {
     const intervalMs = env.SETTLEMENT_POLL_MINUTES * 60 * 1000;
     settlementInterval = setInterval(() => {
-      void runSettlementCycle({ prisma, provider: settlementProvider, logger: app.log }).then((summary) => {
+      void runSettlementCycle({
+        prisma,
+        provider: settlementProvider,
+        logger: app.log,
+        matchWindowMinutes: env.SETTLEMENT_MATCH_WINDOW_MINUTES,
+      }).then((summary) => {
         app.log.info({ summary }, "settlement_cycle_auto");
       }).catch((error) => {
         app.log.error({ err: error }, "settlement_cycle_error");
       });
     }, intervalMs);
     app.log.info({ intervalMinutes: env.SETTLEMENT_POLL_MINUTES, provider: settlementProvider.name }, "settlement_scheduler_started");
+  }
+
+  if (env.FIXTURE_RESOLVE_MINUTES > 0 && settlementProvider.name !== "none") {
+    const runResolver = () => {
+      void runFixtureResolver({ prisma, provider: settlementProvider, logger: app.log }).then((summary) => {
+        app.log.info({ summary }, "fixture_resolver_auto");
+      }).catch((error) => {
+        app.log.error({ err: error }, "fixture_resolver_error");
+      });
+    };
+    // Run once at startup to immediately resolve any pending legs
+    runResolver();
+    resolverInterval = setInterval(runResolver, env.FIXTURE_RESOLVE_MINUTES * 60 * 1000);
+    app.log.info({ intervalMinutes: env.FIXTURE_RESOLVE_MINUTES, provider: settlementProvider.name }, "fixture_resolver_started");
   }
 
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
@@ -447,6 +479,10 @@ const shutdown = async () => {
   if (settlementInterval) {
     clearInterval(settlementInterval);
     settlementInterval = null;
+  }
+  if (resolverInterval) {
+    clearInterval(resolverInterval);
+    resolverInterval = null;
   }
   await app.close();
   await prisma.$disconnect();
